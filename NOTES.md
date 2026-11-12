@@ -114,3 +114,18 @@ PASS and rejection of fabricated evidence. It uses a scripted planner, synthetic
 data, no credentials, and no Gemini calls. The complete 96-test suite passed
 afterward. This replaces the earlier ad hoc stdin-based demonstration command;
 the historical EOFError note above describes that earlier command only.
+
+## Updated fresh-clone verification: 570c894
+
+On November 12, 2026, commit 570c894 was verified from a fresh clone with
+a newly created Python 3.14.2 virtual environment:
+
+- Dependencies installed from requirements.txt; pip check found no broken requirements.
+- Playwright's Chromium installation command succeeded.
+- All 96 automated tests passed in 5.61 seconds.
+- demo_scripted.py produced the expected positive PASS and negative FAIL.
+- CLI help included both explicit credential options.
+- Ignore checks passed for .env, credentials.json, and generated demo reports.
+- The working tree remained clean.
+- Package downloads and the existing browser cache were reused.
+- No .env was copied; no Gemini calls or live login acceptance tests were performed.
