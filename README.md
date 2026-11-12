@@ -6,7 +6,7 @@ Python + Playwright browser testing with a Gemini Interactions action planner.
 
 - Browser observation, strict action validation, execution, evidence verification,
   bounded runner, console output, and JSON reports are implemented.
-- 28 automated tests passed locally, including a real Chromium pipeline test.
+- 43 automated tests passed locally, including a real Chromium pipeline test.
 - Live Gemini completion is NOT verified: recent minimal and structured requests
   returned HTTP 503 or timed out.
 - The real-browser automated test uses a scripted planner, not Gemini.

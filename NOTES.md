@@ -2,7 +2,7 @@
 
 ## Verified locally
 
-- 28 pytest tests passed.
+- 43 pytest tests passed.
 - A real Chromium fixture completed fill -> click -> live text verification.
 - A scripted false PASS was rejected by the live verifier.
 - Console and JSON reporting are integrated.
@@ -37,7 +37,8 @@
 - Loop timing is cooperative. Individual calls may overrun; initialization,
   navigation, and cleanup are outside the loop budget.
 - Recovery attempts are bounded but have no backoff policy.
-- main.py reads text/JSON test files; persisted CLI tests remain pending.
+- Persisted CLI tests cover invalid arguments, text/JSON test files,
+  sanitized startup failures, and report serialization.
 
 ## Remaining work
 
@@ -45,5 +46,5 @@
 2. Add tested credential placeholders/loading/redaction before real login use.
 3. Verify positive and negative live tests across multiple authorized sites.
 4. Strengthen task-completion verification and browser action safety.
-5. Add persisted observer/executor/verifier and CLI edge-case tests.
+5. Expand persisted observer/executor/verifier edge-case tests.
 6. Fresh-clone installation check, packaging review, and demonstration video.
