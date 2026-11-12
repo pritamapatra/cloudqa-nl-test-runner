@@ -114,3 +114,15 @@ the website itself. Same-origin pages, scripts, form submissions, and model-chos
 actions can still misuse credentials. Origin binding is not a security sandbox.
 Only the conventional credentials.json filename is ignored by Git; protect
 custom credential paths yourself. Never commit any credential file.
+
+## Reproducible scripted demonstration
+
+    .venv/bin/python demo_scripted.py --headed
+
+Omit --headed for a headless run. No API key or Gemini call is needed.
+The synthetic fixture demonstrates fill -> click -> live evidence verification,
+then rejection of deliberately fabricated evidence. Both reports under reports/
+identify scripted-planner mode. Expected console verdicts are PASS, then FAIL;
+the demo process exits 0 only when both expected results are confirmed.
+
+This is not a live natural-language acceptance test or proof of Gemini operation.

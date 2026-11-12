@@ -95,3 +95,22 @@ A real Chromium fixture fills a synthetic password, echoes it into the page,
 and verifies that planner context, console output, and the saved report do not
 contain that raw value. Placeholder navigation/select/press actions are rejected.
 These tests do not prove production credential safety or live Gemini login.
+
+## Additional Gemini diagnostics, November 12, 2026
+
+- Model discovery completed in 1.2 seconds and listed the configured
+  gemini-3.8-flash model.
+- A plain-text generate_content request to that model returned HTTP 503
+  after 5.4 seconds, in addition to earlier Interactions failures.
+- A diagnostic Interactions request to advertised gemini-3.7-flash timed
+  out after 15.8 seconds. No model configuration was changed.
+- These results do not establish a root cause or live schema compatibility.
+- Further repeated live requests were paused; live acceptance remains blocked.
+
+## Reproducible demonstration script
+
+demo_scripted.py ran successfully in headed Chromium, with a verified positive
+PASS and rejection of fabricated evidence. It uses a scripted planner, synthetic
+data, no credentials, and no Gemini calls. The complete 96-test suite passed
+afterward. This replaces the earlier ad hoc stdin-based demonstration command;
+the historical EOFError note above describes that earlier command only.
