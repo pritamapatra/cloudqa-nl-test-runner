@@ -61,3 +61,19 @@ using a newly created Python 3.14.2 virtual environment:
 - Package downloads and the existing browser cache were reused.
 - No .env was copied and no Gemini calls were made during this check.
 - This verifies local installation and offline tests, not live Gemini operation.
+
+## Visible scripted demonstration
+
+On November 12, 2026, a headed Chromium demonstration used an injected,
+scripted planner with synthetic page content and no Gemini calls:
+
+- Positive: filled CloudQA, clicked Submit, and verified Hello CloudQA
+  against the live page; PASS in 3 steps.
+- Negative: deliberately fabricated text evidence was rejected;
+  FAIL in 1 step.
+- Both JSON reports were saved under the ignored reports directory and
+  identified their scripted-planner mode; saved verdicts were checked.
+- An interactive pause after reporting raised EOFError because the script
+  was supplied through standard input. Browser cleanup still ran.
+- No demonstration video has been recorded yet.
+- This demonstrates the browser pipeline, not live Gemini planning.
