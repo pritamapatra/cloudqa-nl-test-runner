@@ -2,7 +2,7 @@
 
 ## Verified locally
 
-- 56 pytest tests passed.
+- 96 pytest tests passed.
 - A real Chromium fixture completed fill -> click -> live text verification.
 - A scripted false PASS was rejected by the live verifier.
 - Console and JSON reporting are integrated.
@@ -26,8 +26,12 @@
 - Observation body text is limited to 8,000 characters.
 - Observations do not intentionally collect input values, but this is NOT
   complete credential or PII redaction.
-- No credential placeholders, secure credential injection, or comprehensive
-  redaction. Do not run against real accounts or sensitive pages.
+- Experimental credential placeholders, explicit JSON/environment loading,
+  local fill resolution, and known-value context/report redaction are tested.
+- CLI credential fills are bound to the starting origin. This is not a sandbox;
+  same-origin scripts and form submissions can still expose credentials.
+- No comprehensive redaction or production credential safety guarantee.
+  Do not run against production accounts or sensitive pages.
 - Page content is untrusted. Prompt instructions reduce but do not eliminate
   prompt-injection risk. No sandbox or robust action-policy enforcement exists.
 - Navigation is HTTP(S)-only, but arbitrary page navigation and clicks remain
@@ -47,7 +51,8 @@
 ## Remaining work
 
 1. Resolve live Gemini availability and verify structured-output compatibility.
-2. Add tested credential placeholders/loading/redaction before real login use.
+2. Verify experimental credential integration in an authorized live demo login;
+   raw credentials in natural-language text remain unsupported.
 3. Verify positive and negative live tests across multiple authorized sites.
 4. Strengthen task-completion verification and browser action safety.
 5. Expand persisted observer/executor/verifier edge-case tests.
@@ -81,3 +86,12 @@ scripted planner with synthetic page content and no Gemini calls:
   was supplied through standard input. Browser cleanup still ran.
 - No demonstration video has been recorded yet.
 - This demonstrates the browser pipeline, not live Gemini planning.
+
+## Credential integration checkpoint
+
+Synthetic tests cover JSON/environment loading and precedence, validation,
+whole-value placeholder resolution, origin checks, CLI wiring, and redaction.
+A real Chromium fixture fills a synthetic password, echoes it into the page,
+and verifies that planner context, console output, and the saved report do not
+contain that raw value. Placeholder navigation/select/press actions are rejected.
+These tests do not prove production credential safety or live Gemini login.

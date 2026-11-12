@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from google import genai
 from playwright.sync_api import sync_playwright
 
+from credential_store import load_credentials
 from report import write_report
 from runner import run
 
@@ -21,6 +22,14 @@ def main() -> int:
     source.add_argument("--test-file", help=".txt or JSON file containing a test")
     parser.add_argument("--headed", action="store_true", help="Show the browser")
     parser.add_argument("--report", default="report.json", help="JSON report path")
+    credential_source = parser.add_mutually_exclusive_group()
+    credential_source.add_argument(
+        "--credentials", help="Explicit flat JSON credential file for authorized demo sites"
+    )
+    credential_source.add_argument(
+        "--credential-env", action="store_true",
+        help="Use CLOUDQA_CUSTOMER_USERNAME/PASSWORD for an authorized demo site",
+    )
     args = parser.parse_args()
 
     try:
@@ -69,7 +78,16 @@ def main() -> int:
     try:
         load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
         model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-        print("MODE: Public pages only; real credential workflows are not supported.")
+        credentials = None
+        if args.credentials is not None or args.credential_env:
+            credentials = load_credentials(
+                args.credentials, allowed_origin=args.url
+            )
+            test = credentials.redact(test)
+            print("MODE: Experimental demo credentials; fills bound to starting origin.")
+            print("Use placeholders only; never put raw credentials in test instructions.")
+        else:
+            print("MODE: Public pages only; real credential workflows are not supported.")
         with genai.Client(
             http_options={
                 "timeout": 20_000,
@@ -85,7 +103,10 @@ def main() -> int:
                     page.goto(
                         args.url, wait_until="domcontentloaded", timeout=10_000
                     )
-                    result = run(page, client, test.strip(), model=model)
+                    result = run(
+                        page, client, test.strip(), model=model,
+                        credentials=credentials,
+                    )
                 finally:
                     browser.close()
     except Exception as exc:

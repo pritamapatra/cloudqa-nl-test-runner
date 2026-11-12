@@ -175,3 +175,49 @@ def test_rate_limit_skips_backoff_at_step_limit(environment, backoff_clock):
     assert "Step limit" in result["reason"]
     assert result["retries"] == 0
     assert backoff_clock == []
+
+
+def test_credentials_redact_planner_context_and_report(environment):
+    import json
+    from credential_store import CredentialStore
+
+    secret = "SYNTHETIC_SECRET_123"
+    store = CredentialStore({"customer.password": secret})
+    environment.observe.return_value.snapshot["text"] = "Welcome " + secret
+    environment.execute.return_value = {"completed": True, "text": secret}
+
+    actions = iter([
+        Action(
+            action="fill", reason="Use placeholder",
+            element=1, value="{{customer.password}}",
+        ),
+        finish(),
+    ])
+
+    def planner(*args, **kwargs):
+        assert secret not in json.dumps(kwargs)
+        return next(actions)
+
+    result = runner.run(
+        object(), object(), "Check Welcome " + secret,
+        planner=planner, credentials=store,
+    )
+    assert result["verdict"] == "pass"
+    assert secret not in json.dumps(result)
+    assert result["history"][0]["action"]["value"] == "{{customer.password}}"
+    assert environment.execute.call_args.kwargs["credentials"] is store
+
+
+def test_credentials_redact_failed_verification_output(environment):
+    import json
+    from credential_store import CredentialStore
+
+    secret = "SYNTHETIC_SECRET_456"
+    store = CredentialStore({"customer.password": secret})
+    environment.verify.return_value = {"ok": False, "observed": secret}
+    result = run(
+        Mock(return_value=finish()), credentials=store, max_retries=0,
+    )
+    assert result["verdict"] == "fail"
+    assert secret not in json.dumps(result)
+    assert result["history"][0]["result"]["observed"] == "[REDACTED]"

@@ -19,6 +19,7 @@ def run(
     budget_seconds=60.0,
     max_retries=2,
     planner=plan,
+    credentials=None,
 ):
     if not test.strip():
         raise ValueError("test must not be blank")
@@ -29,6 +30,9 @@ def run(
     if not 0 <= max_retries <= 2:
         raise ValueError("max_retries must be between 0 and 2")
 
+    sanitize = credentials.redact if credentials is not None else lambda value: value
+    test = sanitize(test)
+
     started = time.monotonic()
     deadline = started + budget_seconds
     history = []
@@ -38,14 +42,14 @@ def run(
         return deadline - time.monotonic()
 
     def result(verdict, reason):
-        return {
+        return sanitize({
             "verdict": verdict,
             "reason": reason,
             "elapsed_seconds": round(time.monotonic() - started, 2),
             "steps": len(history),
             "retries": retries,
             "history": history,
-        }
+        })
 
     for step in range(1, max_steps + 1):
         if remaining() <= 0:
@@ -62,12 +66,12 @@ def run(
             action = planner(
                 client,
                 test=test,
-                snapshot=observation.snapshot,
-                history=history[:-1],
+                snapshot=sanitize(observation.snapshot),
+                history=sanitize(history[:-1]),
                 model=model,
                 timeout=min(20.0, remaining()),
             )
-            entry["action"] = action.model_dump(exclude_none=True)
+            entry["action"] = sanitize(action.model_dump(exclude_none=True))
 
             if remaining() <= 0:
                 return result("fail", "Time budget exhausted during planning")
@@ -89,7 +93,12 @@ def run(
                 if action.action == "finish":
                     return result("pass", action.reason)
             else:
-                entry["result"] = execute(page, observation, action)
+                if credentials is None:
+                    entry["result"] = execute(page, observation, action)
+                else:
+                    entry["result"] = execute(
+                        page, observation, action, credentials=credentials
+                    )
                 if remaining() <= 0:
                     return result("fail", "Time budget exhausted during execution")
 

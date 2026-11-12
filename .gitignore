@@ -4,3 +4,4 @@ __pycache__/
 report.json
 reports/
 .pytest_cache/
+credentials.json

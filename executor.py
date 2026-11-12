@@ -6,11 +6,17 @@ from actions import Action
 from observer import Observation
 
 
-def execute(page: Page, observation: Observation, action: Action) -> dict:
+def execute(page: Page, observation: Observation, action: Action, *, credentials=None) -> dict:
     if action.action == "goto":
         url = urlsplit(action.value)
-        if url.scheme not in {"http", "https"} or not url.hostname:
-            raise ValueError("goto requires an absolute HTTP(S) URL")
+        if (
+            url.scheme not in {"http", "https"}
+            or not url.hostname
+            or url.username is not None
+            or url.password is not None
+        ):
+            raise ValueError("goto requires HTTP(S) without embedded credentials")
+        url.port
         page.goto(action.value, wait_until="domcontentloaded", timeout=10_000)
         return {"action": "goto", "url": page.url}
 
@@ -30,7 +36,12 @@ def execute(page: Page, observation: Observation, action: Action) -> dict:
     if action.action == "click":
         handle.click(timeout=5_000)
     elif action.action == "fill":
-        handle.fill(action.value, timeout=5_000)
+        value = action.value
+        if credentials is not None:
+            value = credentials.resolve_fill(value, url=page.url)
+        elif "{{" in value or "}}" in value:
+            raise ValueError("Credential placeholders require a credential store")
+        handle.fill(value, timeout=5_000)
     elif action.action == "select":
         handle.select_option(label=action.value, timeout=5_000)
     elif action.action == "press":

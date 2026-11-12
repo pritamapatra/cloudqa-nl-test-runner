@@ -6,11 +6,12 @@ Python + Playwright browser testing with a Gemini Interactions action planner.
 
 - Browser observation, strict action validation, execution, evidence verification,
   bounded runner, console output, and JSON reports are implemented.
-- 56 automated tests passed locally, including a real Chromium pipeline test.
+- 96 automated tests passed locally, including a real Chromium pipeline test.
 - Live Gemini completion is NOT verified: recent minimal and structured requests
   returned HTTP 503 or timed out.
 - The real-browser automated test uses a scripted planner, not Gemini.
-- Public, non-sensitive pages only. Real credential workflows are unsupported.
+- Public pages by default; explicit experimental credential opt-in for authorized
+  demo accounts only. Production accounts and sensitive sites are unsupported.
 
 ## Setup
 
@@ -27,7 +28,8 @@ GEMINI_API_KEY. A local .env file is loaded explicitly and is ignored by Git.
 
 The default model is gemini-3.8-flash. GEMINI_MODEL overrides it. This model was
 used in an earlier successful SDK smoke test; current live calls are blocked.
-Never commit keys or include credentials in test instructions, URLs, or page data.
+Never commit keys or put raw credentials in test instructions or URLs.
+Credential mode redacts known values, not arbitrary sensitive page data.
 
 ## Run
 
@@ -77,3 +79,38 @@ handling, runner limits, evidence rejection, real-browser fill/click, and report
 serialization. Automated tests do not contact Gemini.
 
 See NOTES.md for limitations and remaining work.
+
+## Experimental demo credentials
+
+Use only authorized, disposable demo accounts. Live Gemini login is not yet
+verified. Do not use production credentials or sensitive pages.
+
+Opt in with either:
+
+- `--credentials credentials.json`: explicit flat JSON file.
+- `--credential-env`: environment-only credential loading.
+
+Flat JSON format, showing synthetic values only:
+
+    {"customer.username":"SYNTHETIC_USER","customer.password":"SYNTHETIC_PASSWORD"}
+
+The explicit environment variables `CLOUDQA_CUSTOMER_USERNAME` and
+`CLOUDQA_CUSTOMER_PASSWORD` override matching file entries. The existing local
+.env loading also makes these variables available. Neither credential mode is
+enabled automatically.
+
+In a test, use `{{customer.username}}` and `{{customer.password}}` as complete
+fill values. Never put raw credentials in the test. Credentials embedded in
+natural-language test text are not parsed or supported.
+
+Credential placeholders resolve locally, only for fill actions. CLI credential
+fills require the starting URL's scheme, hostname, and effective port; a
+cross-origin login redirect is unsupported. Known credential values are redacted
+from planner test text, observations, history, and returned reports.
+
+Redaction replaces exact known strings only. It does not cover encoded,
+transformed, split, or unknown secrets, or arbitrary PII. It does not sanitize
+the website itself. Same-origin pages, scripts, form submissions, and model-chosen
+actions can still misuse credentials. Origin binding is not a security sandbox.
+Only the conventional credentials.json filename is ignored by Git; protect
+custom credential paths yourself. Never commit any credential file.

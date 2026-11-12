@@ -41,6 +41,13 @@ class Action(BaseModel):
         elif self.value is not None:
             raise ValueError("value is not applicable to this action")
 
+        if (
+            self.action != "fill"
+            and self.value is not None
+            and ("{{" in self.value or "}}" in self.value)
+        ):
+            raise ValueError("Credential placeholders are only allowed in fill values")
+
         if self.action == "finish":
             if self.verdict is None:
                 raise ValueError("finish requires a verdict")
