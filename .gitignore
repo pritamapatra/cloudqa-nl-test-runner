@@ -2,3 +2,5 @@
 .venv/
 __pycache__/
 report.json
+reports/
+.pytest_cache/

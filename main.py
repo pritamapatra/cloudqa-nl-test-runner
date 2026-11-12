@@ -1,38 +1,103 @@
 import argparse
+import json
+import os
 import sys
+from pathlib import Path
 from urllib.parse import urlsplit
 
+from dotenv import load_dotenv
+from google import genai
 from playwright.sync_api import sync_playwright
+
+from report import write_report
+from runner import run
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="CloudQA plain-English test runner")
     parser.add_argument("--url", required=True, help="Starting HTTP(S) URL")
-    parser.add_argument("--test", required=True, help="Plain-English test case")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--test", help="Plain-English test case")
+    source.add_argument("--test-file", help=".txt or JSON file containing a test")
     parser.add_argument("--headed", action="store_true", help="Show the browser")
+    parser.add_argument("--report", default="report.json", help="JSON report path")
     args = parser.parse_args()
 
-    url = urlsplit(args.url)
-    if url.scheme not in {"http", "https"} or not url.hostname:
-        parser.error("--url must be an absolute HTTP(S) URL")
-    if not args.test.strip():
-        parser.error("--test must not be empty")
+    try:
+        url = urlsplit(args.url)
+        if (
+            url.scheme not in {"http", "https"}
+            or not url.hostname
+            or url.username is not None
+            or url.password is not None
+        ):
+            parser.error("--url must be HTTP(S), without embedded credentials")
+        # Access the port to reject malformed values before launching a browser.
+        url.port
+    except ValueError:
+        parser.error("--url is invalid")
+
+    test = args.test
+    if args.test_file:
+        path = Path(args.test_file)
+        try:
+            content = path.read_text(encoding="utf-8")
+            if path.suffix.lower() == ".txt":
+                test = content
+            elif path.suffix.lower() == ".json":
+                data = json.loads(content)
+                if not isinstance(data, dict) or set(data) != {"test"}:
+                    parser.error("JSON test file must contain only a 'test' field")
+                test = data["test"]
+            else:
+                parser.error("--test-file must use .txt or .json")
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            parser.error("Cannot read or parse the test file")
+
+    if not isinstance(test, str) or not test.strip():
+        parser.error("Test must be a nonblank string")
+
+    result = {
+        "verdict": "fail",
+        "reason": "Run did not start",
+        "elapsed_seconds": 0.0,
+        "steps": 0,
+        "retries": 0,
+        "history": [],
+    }
 
     try:
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=not args.headed)
-            try:
-                page = browser.new_page()
-                page.goto(args.url, wait_until="domcontentloaded", timeout=30_000)
-                print(f"URL: {page.url}")
-                print(f"TITLE: {page.title()}")
-                print("STATUS: Navigation complete; test execution is not implemented.")
-            finally:
-                browser.close()
-        return 0
+        load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+        model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        print("MODE: Public pages only; real credential workflows are not supported.")
+        with genai.Client(
+            http_options={
+                "timeout": 20_000,
+                "retry_options": {"attempts": 1},
+            }
+        ) as client:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(headless=not args.headed)
+                try:
+                    page = browser.new_page()
+                    page.set_default_timeout(5_000)
+                    page.set_default_navigation_timeout(10_000)
+                    page.goto(
+                        args.url, wait_until="domcontentloaded", timeout=10_000
+                    )
+                    result = run(page, client, test.strip(), model=model)
+                finally:
+                    browser.close()
     except Exception as exc:
-        print(f"ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
+        result["verdict"] = "fail"
+        result["reason"] = f"Run failed ({type(exc).__name__}); details suppressed"
+
+    try:
+        write_report(result, args.report)
+    except Exception as exc:
+        print(f"REPORT ERROR: {type(exc).__name__}", file=sys.stderr)
         return 1
+    return 0 if result["verdict"] == "pass" else 1
 
 
 if __name__ == "__main__":
