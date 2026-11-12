@@ -2,7 +2,7 @@
 
 ## Verified locally
 
-- 43 pytest tests passed.
+- 52 pytest tests passed.
 - A real Chromium fixture completed fill -> click -> live text verification.
 - A scripted false PASS was rejected by the live verifier.
 - Console and JSON reporting are integrated.
@@ -47,4 +47,17 @@
 3. Verify positive and negative live tests across multiple authorized sites.
 4. Strengthen task-completion verification and browser action safety.
 5. Expand persisted observer/executor/verifier edge-case tests.
-6. Fresh-clone installation check, packaging review, and demonstration video.
+6. Packaging review and demonstration video.
+
+## Fresh-clone installation verification
+
+On November 12, 2026, commit `526280c` was verified from a fresh clone
+using a newly created Python 3.14.2 virtual environment:
+
+- Installed dependencies from requirements.txt; pip check found no broken requirements.
+- Ran Playwright's Chromium installation command successfully.
+- All 52 automated tests passed in 5.79 seconds.
+- CLI --help succeeded; the working tree remained clean.
+- Package downloads and the existing browser cache were reused.
+- No .env was copied and no Gemini calls were made during this check.
+- This verifies local installation and offline tests, not live Gemini operation.
