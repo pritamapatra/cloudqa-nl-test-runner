@@ -6,7 +6,7 @@ Python + Playwright browser testing with a Gemini Interactions action planner.
 
 - Browser observation, strict action validation, execution, evidence verification,
   bounded runner, console output, and JSON reports are implemented.
-- 52 automated tests passed locally, including a real Chromium pipeline test.
+- 56 automated tests passed locally, including a real Chromium pipeline test.
 - Live Gemini completion is NOT verified: recent minimal and structured requests
   returned HTTP 503 or timed out.
 - The real-browser automated test uses a scripted planner, not Gemini.
@@ -59,7 +59,8 @@ and executes or verifies it. Supported actions:
 - finish: pass/fail; PASS requires live evidence verification
 
 Limits: 15 planning steps, a 60-second loop budget, and at most two recovery
-attempts. Rate limiting stops the run immediately. SDK retries are disabled
+attempts shared across failures. Rate limits use bounded exponential backoff
+with jitter within that allowance and the remaining loop budget. SDK retries are disabled
 in the CLI client; its timeout is 20,000 ms.
 
 The loop budget is cooperative, not a hard process deadline. Browser startup,

@@ -80,9 +80,9 @@ def test_step_limit(environment):
     assert "Step limit" in result["reason"]
 
 
-def test_rate_limit_stops_immediately(environment):
+def test_rate_limit_stops_when_retries_disabled(environment):
     planner = Mock(side_effect=PlannerRateLimitError("private"))
-    result = run(planner)
+    result = run(planner, max_retries=0)
     assert result["verdict"] == "fail"
     planner.assert_called_once()
     assert "private" not in str(result)
@@ -121,3 +121,57 @@ def test_assert_alone_is_not_completion(environment):
     result = run(planner, max_steps=1)
     assert result["verdict"] == "fail"
     assert "Step limit" in result["reason"]
+
+
+@pytest.fixture
+def backoff_clock(monkeypatch):
+    clock = [0.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += seconds
+
+    monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(runner.time, "sleep", sleep)
+    monkeypatch.setattr(runner.random, "uniform", lambda low, high: 0.125)
+    return sleeps
+
+
+def test_rate_limit_recovers_after_backoff(environment, backoff_clock):
+    planner = Mock(side_effect=[PlannerRateLimitError("private"), finish()])
+    result = run(planner)
+    assert result["verdict"] == "pass"
+    assert result["retries"] == 1
+    assert backoff_clock == [1.125]
+    assert planner.call_args.kwargs["timeout"] > 0
+    assert "private" not in str(result)
+
+
+def test_rate_limit_backoff_is_exponential_and_bounded(environment, backoff_clock):
+    planner = Mock(side_effect=PlannerRateLimitError("private"))
+    result = run(planner)
+    assert result["verdict"] == "fail"
+    assert result["retries"] == 2
+    assert planner.call_count == 3
+    assert backoff_clock == [1.125, 2.125]
+    assert "private" not in str(result)
+
+
+def test_rate_limit_skips_backoff_without_budget(environment, backoff_clock):
+    planner = Mock(side_effect=PlannerRateLimitError("private"))
+    result = run(planner, budget_seconds=1.0)
+    assert result["verdict"] == "fail"
+    assert "budget" in result["reason"]
+    assert result["retries"] == 0
+    planner.assert_called_once()
+    assert backoff_clock == []
+
+
+def test_rate_limit_skips_backoff_at_step_limit(environment, backoff_clock):
+    planner = Mock(side_effect=PlannerRateLimitError("private"))
+    result = run(planner, max_steps=1)
+    assert result["verdict"] == "fail"
+    assert "Step limit" in result["reason"]
+    assert result["retries"] == 0
+    assert backoff_clock == []

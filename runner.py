@@ -1,5 +1,6 @@
 """Bounded browser test loop. Planner context must contain no real credentials."""
 
+import random
 import time
 
 from executor import execute
@@ -94,7 +95,16 @@ def run(
 
         except PlannerRateLimitError:
             entry["result"] = {"ok": False, "error": "Planner rate limited"}
-            return result("fail", "Gemini rate limit; stopped without repeated requests")
+            if retries >= max_retries:
+                return result("fail", "Gemini rate limit; recovery limit exhausted")
+            if step >= max_steps:
+                return result("fail", "Step limit exhausted after Gemini rate limit")
+            delay = (2.0 ** retries) + random.uniform(0.0, 0.25)
+            if remaining() <= delay:
+                return result("fail", "Insufficient time budget for rate-limit backoff")
+            entry["result"]["backoff_seconds"] = round(delay, 3)
+            retries += 1
+            time.sleep(delay)
         except PlannerError as exc:
             entry["result"] = {"ok": False, "error": str(exc)}
             if remaining() <= 0:

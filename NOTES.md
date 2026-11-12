@@ -2,7 +2,7 @@
 
 ## Verified locally
 
-- 52 pytest tests passed.
+- 56 pytest tests passed.
 - A real Chromium fixture completed fill -> click -> live text verification.
 - A scripted false PASS was rejected by the live verifier.
 - Console and JSON reporting are integrated.
@@ -36,7 +36,11 @@
   sensitive. Generated reports are ignored by Git.
 - Loop timing is cooperative. Individual calls may overrun; initialization,
   navigation, and cleanup are outside the loop budget.
-- Recovery attempts are bounded but have no backoff policy.
+- Rate-limit recovery uses exponential backoff with 0-0.25 seconds of jitter,
+  sharing the maximum two recovery retries across failures. Backoff is skipped
+  when the remaining budget or step limit prevents another attempt.
+- Other planner/action failures have bounded recovery without backoff.
+- Rate-limit backoff is verified by offline tests, not live 429 responses.
 - Persisted CLI tests cover invalid arguments, text/JSON test files,
   sanitized startup failures, and report serialization.
 
